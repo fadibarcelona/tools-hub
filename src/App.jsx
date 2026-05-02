@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import CryptoJS from 'crypto-js';
 import yaml from 'js-yaml';
 import { v4 as uuidv4 } from 'uuid';
-import QRCode from 'react-qr-code';
+import { QRCodeCanvas } from 'qrcode.react';
 import ReactMarkdown from 'react-markdown';
 
 export default function App() {
@@ -20,7 +20,12 @@ export default function App() {
 	  const [passwordLength, setPasswordLength] = useState(16);
 	  const [generatedPassword, setGeneratedPassword] = useState('');
 
-	  const [yamlInput, setYamlInput] = useState('name: ChatGPT');
+	  const [yamlInput, setYamlInput] = useState(
+		  `name: app
+		  services:
+		    web:
+		        image: nginx`
+		    );
 
 	  const [uuidValue, setUuidValue] = useState('');
 
@@ -34,7 +39,7 @@ export default function App() {
 
 	  const [regexText, setRegexText] = useState('hello 123');
 
-	  const [qrValue, setQrValue] = useState('https://example.com');
+	  const [qrValue, setQrValue] = useState('https://google.com');
 
 	  const [ageDate, setAgeDate] = useState('2000-01-01');
 
@@ -49,6 +54,12 @@ export default function App() {
 	  const [temp, setTemp] = useState('0');
 
 	  const [hex, setHex] = useState('#000000');
+
+	  const [imagePreview, setImagePreview] = useState(null);
+
+	  const [compressedImage, setCompressedImage] = useState(null);
+
+	  const fileInputRef = useRef(null);
 
 	  /* =========================
 	   *      FUNCTIONS
@@ -75,12 +86,25 @@ export default function App() {
 					      }
 		    };
 
+	  /* YAML VALIDATOR */
+
 	  const validateYAML = () => {
 		      try {
 			            yaml.load(yamlInput);
+
+			            const lines = yamlInput.split('\n');
+
+			            for (let line of lines) {
+					            const spaces = line.match(/^ */)[0].length;
+
+					            if (spaces % 2 !== 0) {
+							              return 'Invalid YAML indentation';
+							            }
+					          }
+
 			            return 'Valid YAML';
-			          } catch {
-					        return 'Invalid YAML';
+			          } catch (e) {
+					        return `Invalid YAML: ${e.message}`;
 					      }
 		    };
 
@@ -92,11 +116,13 @@ export default function App() {
 		      try {
 			            const parts = jwtInput.split('.');
 
-			            return JSON.stringify(
-					            JSON.parse(atob(parts[1])),
-					            null,
-					            2
-					          );
+			            if (parts.length !== 3) {
+					            return 'Invalid JWT';
+					          }
+
+			            const payload = JSON.parse(atob(parts[1]));
+
+			            return JSON.stringify(payload, null, 2);
 			          } catch {
 					        return 'Invalid JWT';
 					      }
@@ -114,6 +140,7 @@ export default function App() {
 
 	  const calculateAge = () => {
 		      const birth = new Date(ageDate);
+
 		      const today = new Date();
 
 		      let age = today.getFullYear() - birth.getFullYear();
@@ -129,6 +156,7 @@ export default function App() {
 
 	  const bmi = useMemo(() => {
 		      const h = Number(height) / 100;
+
 		      const w = Number(weight);
 
 		      if (!h || !w) return 0;
@@ -144,17 +172,61 @@ export default function App() {
 		    };
 
 	  /* =========================
+	   *      IMAGE COMPRESSOR
+	   *        ========================= */
+
+	  const handleImageUpload = (e) => {
+		      const file = e.target.files[0];
+
+		      if (!file) return;
+
+		      const reader = new FileReader();
+
+		      reader.onload = (event) => {
+			            const img = new Image();
+
+			            img.onload = () => {
+					            const canvas = document.createElement('canvas');
+
+					            const ctx = canvas.getContext('2d');
+
+					            const MAX_WIDTH = 800;
+
+					            const scale = MAX_WIDTH / img.width;
+
+					            canvas.width = MAX_WIDTH;
+
+					            canvas.height = img.height * scale;
+
+					            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+					            const compressed = canvas.toDataURL('image/jpeg', 0.6);
+
+					            setImagePreview(event.target.result);
+
+					            setCompressedImage(compressed);
+					          };
+
+			            img.src = event.target.result;
+			          };
+
+		      reader.readAsDataURL(file);
+		    };
+
+	  /* =========================
 	   *      TEXT DIFFERENCE
 	   *        ========================= */
 
 	  const diffView = () => {
 		      const a = text.split('\n');
+
 		      const b = text2.split('\n');
 
 		      const max = Math.max(a.length, b.length);
 
 		      return Array.from({ length: max }, (_, i) => {
 			            const left = a[i] || '';
+
 			            const right = b[i] || '';
 
 			            const changed = left !== right;
@@ -185,15 +257,11 @@ export default function App() {
 	  const NavButton = ({ id, label }) => (
 		      <button
 		        onClick={() => setPage(id)}
-		        className="bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded"
+		        className="bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-sm"
 		      >
 		        {label}
 		      </button>
 		    );
-
-	  /* =========================
-	   *      UI
-	   *        ========================= */
 
 	  return (
 		      <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -201,6 +269,7 @@ export default function App() {
 		        {/* NAVBAR */}
 
 		        <div className="bg-black text-white p-4 flex flex-wrap gap-2">
+
 		          <NavButton id="home" label="Home" />
 		          <NavButton id="text" label="Text Case Converter" />
 		          <NavButton id="password" label="Password Generator" />
@@ -213,12 +282,14 @@ export default function App() {
 		          <NavButton id="markdown" label="Markdown Preview" />
 		          <NavButton id="regex" label="Regex Tester" />
 		          <NavButton id="qr" label="QR Generator" />
+		          <NavButton id="image" label="Image Compressor" />
 		          <NavButton id="age" label="Age Calculator" />
 		          <NavButton id="bmi" label="BMI Calculator" />
 		          <NavButton id="temp" label="Temperature Converter" />
 		          <NavButton id="length" label="Length Converter" />
 		          <NavButton id="weight" label="Weight Converter" />
 		          <NavButton id="color" label="Color Picker" />
+
 		        </div>
 
 		        <div className="p-6">
@@ -237,10 +308,11 @@ export default function App() {
 				            </div>
 				          )}
 
-		          {/* TEXT */}
+		          {/* TEXT CASE */}
 
 		          {page === 'text' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Text Case Converter
 				              </h2>
@@ -252,6 +324,7 @@ export default function App() {
 				              />
 
 				              <div className="flex gap-3 mt-4 flex-wrap">
+
 				                <button
 				                  onClick={() => setText(text.toUpperCase())}
 				                  className="bg-black text-white px-4 py-2 rounded"
@@ -281,6 +354,7 @@ export default function App() {
 				                >
 				                  Title Case
 				                </button>
+
 				              </div>
 				            </div>
 				          )}
@@ -289,6 +363,7 @@ export default function App() {
 
 		          {page === 'password' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Password Generator
 				              </h2>
@@ -298,9 +373,7 @@ export default function App() {
 				                min="6"
 				                max="64"
 				                value={passwordLength}
-				                onChange={(e) =>
-							                setPasswordLength(Number(e.target.value))
-							              }
+				                onChange={(e) => setPasswordLength(Number(e.target.value))}
 				                className="w-full"
 				              />
 
@@ -314,18 +387,21 @@ export default function App() {
 				              <div className="mt-4 bg-gray-100 p-3 rounded break-all">
 				                {generatedPassword}
 				              </div>
+
 				            </div>
 				          )}
 
-		          {/* DIFF */}
+		          {/* TEXT DIFF */}
 
 		          {page === 'diff' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Text Difference Checker
 				              </h2>
 
 				              <div className="grid md:grid-cols-2 gap-4">
+
 				                <textarea
 				                  value={text}
 				                  onChange={(e) => setText(e.target.value)}
@@ -337,11 +413,13 @@ export default function App() {
 				                  onChange={(e) => setText2(e.target.value)}
 				                  className="border p-3 rounded h-64"
 				                />
+
 				              </div>
 
 				              <div className="mt-6 border rounded overflow-hidden">
 				                {diffView()}
 				              </div>
+
 				            </div>
 				          )}
 
@@ -349,6 +427,7 @@ export default function App() {
 
 		          {page === 'json' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                JSON Formatter
 				              </h2>
@@ -362,6 +441,7 @@ export default function App() {
 				              <pre className="mt-4 bg-gray-100 p-3 rounded overflow-auto">
 				                {formatJSON()}
 				              </pre>
+
 				            </div>
 				          )}
 
@@ -369,6 +449,7 @@ export default function App() {
 
 		          {page === 'yaml' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                YAML Validator
 				              </h2>
@@ -376,12 +457,13 @@ export default function App() {
 				              <textarea
 				                value={yamlInput}
 				                onChange={(e) => setYamlInput(e.target.value)}
-				                className="w-full h-40 border p-3 rounded"
+				                className="w-full h-48 border p-3 rounded font-mono"
 				              />
 
 				              <div className="mt-4 bg-gray-100 p-3 rounded">
 				                {validateYAML()}
 				              </div>
+
 				            </div>
 				          )}
 
@@ -389,6 +471,7 @@ export default function App() {
 
 		          {page === 'uuid' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                UUID Generator
 				              </h2>
@@ -403,6 +486,7 @@ export default function App() {
 				              <div className="mt-4 bg-gray-100 p-3 rounded break-all">
 				                {uuidValue}
 				              </div>
+
 				            </div>
 				          )}
 
@@ -410,6 +494,7 @@ export default function App() {
 
 		          {page === 'hash' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                SHA256 Hash Generator
 				              </h2>
@@ -423,6 +508,7 @@ export default function App() {
 				              <div className="mt-4 bg-gray-100 p-3 rounded break-all">
 				                {generateHash()}
 				              </div>
+
 				            </div>
 				          )}
 
@@ -430,6 +516,7 @@ export default function App() {
 
 		          {page === 'jwt' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                JWT Decoder
 				              </h2>
@@ -443,6 +530,7 @@ export default function App() {
 				              <pre className="mt-4 bg-gray-100 p-3 rounded overflow-auto">
 				                {decodeJWT()}
 				              </pre>
+
 				            </div>
 				          )}
 
@@ -450,6 +538,7 @@ export default function App() {
 
 		          {page === 'markdown' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Markdown Preview
 				              </h2>
@@ -460,11 +549,12 @@ export default function App() {
 				                className="w-full h-40 border p-3 rounded"
 				              />
 
-				              <div className="mt-4 bg-gray-100 p-4 rounded">
+				              <div className="mt-4 bg-gray-100 p-4 rounded prose max-w-none">
 				                <ReactMarkdown>
 				                  {markdownInput}
 				                </ReactMarkdown>
 				              </div>
+
 				            </div>
 				          )}
 
@@ -472,6 +562,7 @@ export default function App() {
 
 		          {page === 'regex' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Regex Tester
 				              </h2>
@@ -491,27 +582,101 @@ export default function App() {
 				              <div className="mt-4 bg-gray-100 p-3 rounded">
 				                {regexMatches()}
 				              </div>
+
 				            </div>
 				          )}
 
 		          {/* QR */}
+                           {page === 'qr' && (
+				     <div className="bg-white p-6 rounded shadow">
 
-		          {page === 'qr' && (
+				       <h2 className="text-2xl font-bold mb-4">
+				         QR Generator
+				       </h2>
+
+				       <input
+				         value={qrValue}
+				         onChange={(e) => setQrValue(e.target.value)}
+				         className="w-full border p-3 rounded"
+				         placeholder="Enter text or URL"
+				       />
+
+				       <div className="mt-6 flex justify-center p-6 border rounded bg-white">
+
+				         {qrValue.trim() ? (
+						         <QRCodeCanvas
+						           value={qrValue}
+						           size={220}
+						           bgColor="#ffffff"
+						           fgColor="#000000"
+						         />
+						       ) : (
+							               <p className="text-gray-500">
+							                 Type something to generate QR
+							               </p>
+							             )}
+
+				       </div>
+
+				     </div>
+			   )}
+
+		          {/* IMAGE COMPRESSOR */}
+
+		          {page === 'image' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
-				                QR Generator
+				                Image Compressor
 				              </h2>
 
 				              <input
-				                value={qrValue}
-				                onChange={(e) => setQrValue(e.target.value)}
-				                className="w-full border p-3 rounded"
-				                placeholder="Enter URL or text"
+				                type="file"
+				                accept="image/*"
+				                ref={fileInputRef}
+				                onChange={handleImageUpload}
 				              />
 
-				              <div className="mt-6 flex justify-center bg-white p-6">
-				                <QRCode value={qrValue || ' '} size={220} />
-				              </div>
+				              {imagePreview && (
+						                    <div className="mt-6">
+
+						                      <h3 className="font-bold mb-2">
+						                        Original
+						                      </h3>
+
+						                      <img
+						                        src={imagePreview}
+						                        alt="Original"
+						                        className="max-w-xs rounded border"
+						                      />
+
+						                    </div>
+						                  )}
+
+				              {compressedImage && (
+						                    <div className="mt-6">
+
+						                      <h3 className="font-bold mb-2">
+						                        Compressed
+						                      </h3>
+
+						                      <img
+						                        src={compressedImage}
+						                        alt="Compressed"
+						                        className="max-w-xs rounded border"
+						                      />
+
+						                      <a
+						                        href={compressedImage}
+						                        download="compressed.jpg"
+						                        className="inline-block mt-4 bg-black text-white px-4 py-2 rounded"
+						                      >
+						                        Download Compressed Image
+						                      </a>
+
+						                    </div>
+						                  )}
+
 				            </div>
 				          )}
 
@@ -519,6 +684,7 @@ export default function App() {
 
 		          {page === 'age' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Age Calculator
 				              </h2>
@@ -533,6 +699,7 @@ export default function App() {
 				              <div className="mt-4 text-xl font-bold">
 				                Age: {calculateAge()} years
 				              </div>
+
 				            </div>
 				          )}
 
@@ -540,6 +707,7 @@ export default function App() {
 
 		          {page === 'bmi' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                BMI Calculator
 				              </h2>
@@ -563,6 +731,7 @@ export default function App() {
 				              <div className="mt-4 text-xl font-bold">
 				                BMI: {bmi.toFixed(2)} ({bmiStatus()})
 				              </div>
+
 				            </div>
 				          )}
 
@@ -570,6 +739,7 @@ export default function App() {
 
 		          {page === 'temp' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Temperature Converter
 				              </h2>
@@ -586,12 +756,13 @@ export default function App() {
 				              </div>
 
 				              <div className="mt-2 bg-gray-100 p-3 rounded">
-				                Fahrenheit: {(temp * 9/5 + 32).toFixed(2)}°F
+				                Fahrenheit: {(temp * 9 / 5 + 32).toFixed(2)}°F
 				              </div>
 
 				              <div className="mt-2 bg-gray-100 p-3 rounded">
 				                Kelvin: {(Number(temp) + 273.15).toFixed(2)}K
 				              </div>
+
 				            </div>
 				          )}
 
@@ -599,6 +770,7 @@ export default function App() {
 
 		          {page === 'length' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Length Converter
 				              </h2>
@@ -625,6 +797,7 @@ export default function App() {
 				              <div className="mt-2 bg-gray-100 p-3 rounded">
 				                Feet: {(meters * 3.28084).toFixed(2)} ft
 				              </div>
+
 				            </div>
 				          )}
 
@@ -632,6 +805,7 @@ export default function App() {
 
 		          {page === 'weight' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Weight Converter
 				              </h2>
@@ -654,6 +828,7 @@ export default function App() {
 				              <div className="mt-2 bg-gray-100 p-3 rounded">
 				                Ounces: {(kg * 35.274).toFixed(2)} oz
 				              </div>
+
 				            </div>
 				          )}
 
@@ -661,6 +836,7 @@ export default function App() {
 
 		          {page === 'color' && (
 				            <div className="bg-white p-6 rounded shadow">
+
 				              <h2 className="text-2xl font-bold mb-4">
 				                Color Picker
 				              </h2>
@@ -675,6 +851,7 @@ export default function App() {
 				              <div className="mt-4 bg-gray-100 p-3 rounded">
 				                HEX: {hex}
 				              </div>
+
 				            </div>
 				          )}
 
