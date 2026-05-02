@@ -1,43 +1,61 @@
 import React, { useMemo, useState } from 'react';
+import CryptoJS from 'crypto-js';
+import yaml from 'js-yaml';
+import { v4 as uuidv4 } from 'uuid';
+import QRCode from 'react-qr-code';
+import ReactMarkdown from 'react-markdown';
 
-export default function EverydayToolsHub() {
-	  const [search, setSearch] = useState('');
+export default function App() {
+	  const [page, setPage] = useState('home');
+
 	  const [text, setText] = useState('Hello World');
+	  const [text2, setText2] = useState('Hello World!');
+
 	  const [jsonInput, setJsonInput] = useState('{"name":"ChatGPT"}');
-	  const [base64Input, setBase64Input] = useState('Hello');
-	  const [urlInput, setUrlInput] = useState('https://example.com?q=hello world');
-	  const [timestamp, setTimestamp] = useState(Math.floor(Date.now() / 1000).toString());
+
 	  const [passwordLength, setPasswordLength] = useState(16);
 	  const [generatedPassword, setGeneratedPassword] = useState('');
+
+	  const [yamlInput, setYamlInput] = useState('name: test');
+
+	  const [uuidValue, setUuidValue] = useState('');
+
+	  const [hashInput, setHashInput] = useState('hello');
+
+	  const [jwtInput, setJwtInput] = useState('');
+
+	  const [markdownInput, setMarkdownInput] = useState('# Hello');
+
+	  const [regexPattern, setRegexPattern] = useState('\\d+');
+	  const [regexText, setRegexText] = useState('hello 123');
+
+	  const [qrValue, setQrValue] = useState('https://example.com');
+
+	  const [ageDate, setAgeDate] = useState('2000-01-01');
+
 	  const [height, setHeight] = useState('170');
 	  const [weight, setWeight] = useState('70');
-	  const [qrText, setQrText] = useState('https://example.com');
+
+	  const [meters, setMeters] = useState('1');
+
+	  const [kg, setKg] = useState('1');
+
+	  const [temp, setTemp] = useState('0');
+
 	  const [hex, setHex] = useState('#000000');
 
-	  const tools = [
-		      'Text Case Converter',
-		      'Word Counter',
-		      'Password Generator',
-		      'JSON Formatter',
-		      'QR Code Generator',
-		      'Unit Converter',
-		      'Base64 Encoder/Decoder',
-		      'Color Picker',
-		      'URL Encoder/Decoder',
-		      'Timestamp Converter',
-		      'BMI Calculator',
-		    ];
-
-	  const filteredTools = tools.filter((tool) =>
-		      tool.toLowerCase().includes(search.toLowerCase())
-		    );
+	  /* =====================
+	   *      FUNCTIONS
+	   *        ===================== */
 
 	  const generatePassword = () => {
-		      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+		      const chars =
+			        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+
 		      let password = '';
 
 		      for (let i = 0; i < passwordLength; i++) {
-			            password += chars.charAt(Math.floor(Math.random() * chars.length));
+			            password += chars[Math.floor(Math.random() * chars.length)];
 			          }
 
 		      setGeneratedPassword(password);
@@ -51,126 +69,416 @@ export default function EverydayToolsHub() {
 					      }
 		    };
 
+	  const validateYAML = () => {
+		      try {
+			            yaml.load(yamlInput);
+			            return 'Valid YAML';
+			          } catch (e) {
+					        return 'Invalid YAML';
+					      }
+		    };
+
+	  const generateHash = () => {
+		      return CryptoJS.SHA256(hashInput).toString();
+		    };
+
+	  const decodeJWT = () => {
+		      try {
+			            const parts = jwtInput.split('.');
+			            return JSON.stringify(
+					            JSON.parse(atob(parts[1])),
+					            null,
+					            2
+					          );
+			          } catch {
+					        return 'Invalid JWT';
+					      }
+		    };
+
+	  const regexMatches = () => {
+		      try {
+			            const regex = new RegExp(regexPattern, 'g');
+			            return regexText.match(regex)?.join(', ') || 'No matches';
+			          } catch {
+					        return 'Invalid Regex';
+					      }
+		    };
+
+	  const calculateAge = () => {
+		      const birth = new Date(ageDate);
+		      const today = new Date();
+
+		      let age = today.getFullYear() - birth.getFullYear();
+
+		      const m = today.getMonth() - birth.getMonth();
+
+		      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+			            age--;
+			          }
+
+		      return age;
+		    };
+
 	  const bmi = useMemo(() => {
 		      const h = Number(height) / 100;
 		      const w = Number(weight);
 
-		      if (!h || !w) return '0';
+		      if (!h || !w) return 0;
 
-		      return (w / (h * h)).toFixed(2);
+		      return w / (h * h);
 		    }, [height, weight]);
 
-	  const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
-	  const charCount = text.length;
+	  const bmiStatus = () => {
+		      if (bmi < 18.5) return 'Underweight';
+		      if (bmi < 25) return 'Healthy';
+		      if (bmi < 30) return 'Overweight';
+		      return 'Obese';
+		    };
+
+	  const diffView = () => {
+		      const a = text.split('\n');
+		      const b = text2.split('\n');
+
+		      const max = Math.max(a.length, b.length);
+
+		      return Array.from({ length: max }, (_, i) => {
+			            const left = a[i] || '';
+			            const right = b[i] || '';
+
+			            const changed = left !== right;
+
+			            return (
+					            <div
+					              key={i}
+					              className={`grid grid-cols-2 border-b ${
+							                  changed ? 'bg-red-100' : 'bg-green-100'
+							                }`}
+					            >
+					              <div className="p-2 whitespace-pre-wrap">
+					                {left}
+					              </div>
+
+					              <div className="p-2 whitespace-pre-wrap">
+					                {right}
+					              </div>
+					            </div>
+					          );
+			          });
+		    };
+
+	  /* =====================
+	   *      NAVIGATION
+	   *        ===================== */
+
+	  const NavButton = ({ id, label }) => (
+		      <button
+		        onClick={() => setPage(id)}
+		        className="bg-gray-800 px-3 py-2 rounded hover:bg-gray-700"
+		      >
+		        {label}
+		      </button>
+		    );
+
+	  /* =====================
+	   *      UI
+	   *        ===================== */
 
 	  return (
-		      <div className="min-h-screen bg-gray-100 text-gray-900">
-		        <header className="bg-black text-white py-8 shadow-xl">
-		          <div className="max-w-7xl mx-auto px-6">
-		            <h1 className="text-4xl font-bold">Everyday Tools Hub</h1>
-		            <p className="mt-2 text-gray-300">
-		              Fully working online utilities platform built with React + Tailwind.
-		            </p>
-		          </div>
-		        </header>
+		      <div className="min-h-screen bg-gray-100">
+		        <div className="bg-black text-white p-4 flex flex-wrap gap-2">
+		          <NavButton id="home" label="Home" />
+		          <NavButton id="text" label="Text Case Converter" />
+		          <NavButton id="password" label="Password Generator" />
+		          <NavButton id="diff" label="Text Difference Checker" />
+		          <NavButton id="json" label="JSON Formatter" />
+		          <NavButton id="yaml" label="YAML Validator" />
+		          <NavButton id="uuid" label="UUID Generator" />
+		          <NavButton id="hash" label="Hash Generator" />
+		          <NavButton id="jwt" label="JWT Decoder" />
+		          <NavButton id="markdown" label="Markdown Preview" />
+		          <NavButton id="regex" label="Regex Tester" />
+		          <NavButton id="qr" label="QR Generator" />
+		          <NavButton id="age" label="Age Calculator" />
+		          <NavButton id="bmi" label="BMI Calculator" />
+		          <NavButton id="length" label="Length Converter" />
+		          <NavButton id="weight" label="Weight Converter" />
+		          <NavButton id="temp" label="Temperature Converter" />
+		          <NavButton id="color" label="Color Picker" />
+		        </div>
 
-		        <main className="max-w-7xl mx-auto px-6 py-10">
-		          <div className="mb-8">
-		            <input
-		              value={search}
-		              onChange={(e) => setSearch(e.target.value)}
-		              placeholder="Search tools..."
-		              className="w-full p-4 rounded-2xl border border-gray-300 shadow-sm"
-		            />
-		          </div>
+		        <div className="p-6">
 
-		          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-		            {filteredTools.map((tool, index) => (
-				                <div key={index} className="bg-white rounded-3xl p-6 shadow-md border">
-				                  <h2 className="text-xl font-bold mb-2">{tool}</h2>
-				                  <p className="text-gray-600">Production-ready utility tool.</p>
-				                </div>
-				              ))}
-		          </div>
+		          {page === 'home' && (
+				            <div>
+				              <h1 className="text-4xl font-bold">
+				                SaaS Tools Hub
+				              </h1>
 
-		          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">Text Case Converter</h2>
-		              <textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full border rounded-2xl p-4 h-40" />
+				              <p className="mt-3 text-gray-600">
+				                Production-ready utility platform
+				              </p>
+				            </div>
+				          )}
 
-		              <div className="flex flex-wrap gap-3 mt-4">
-		                <button className="bg-black text-white px-4 py-2 rounded-xl" onClick={() => setText(text.toUpperCase())}>UPPERCASE</button>
-		                <button className="bg-black text-white px-4 py-2 rounded-xl" onClick={() => setText(text.toLowerCase())}>lowercase</button>
-		              </div>
+		          {page === 'text' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                Text Case Converter
+				              </h2>
 
-		              <div className="mt-4 text-gray-600">Words: {wordCount} | Characters: {charCount}</div>
-		            </div>
+				              <textarea
+				                value={text}
+				                onChange={(e) => setText(e.target.value)}
+				                className="w-full h-40 border p-3 rounded"
+				              />
 
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">Password Generator</h2>
-		              <input type="range" min="8" max="64" value={passwordLength} onChange={(e) => setPasswordLength(e.target.value)} className="w-full" />
-		              <button onClick={generatePassword} className="mt-4 bg-black text-white px-6 py-3 rounded-2xl">Generate Password</button>
-		              <div className="mt-4 p-4 border rounded-2xl break-all bg-gray-100">{generatedPassword}</div>
-		            </div>
+				              <div className="flex gap-3 mt-4">
+				                <button
+				                  onClick={() => setText(text.toUpperCase())}
+				                  className="bg-black text-white px-4 py-2 rounded"
+				                >
+				                  UPPERCASE
+				                </button>
 
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">JSON Formatter</h2>
-		              <textarea value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="w-full border rounded-2xl p-4 h-40 font-mono" />
-		              <pre className="mt-4 bg-gray-100 p-4 rounded-2xl overflow-auto text-sm">{formatJSON()}</pre>
-		            </div>
+				                <button
+				                  onClick={() => setText(text.toLowerCase())}
+				                  className="bg-black text-white px-4 py-2 rounded"
+				                >
+				                  lowercase
+				                </button>
+				              </div>
+				            </div>
+				          )}
 
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">Base64 Encoder / Decoder</h2>
-		              <textarea value={base64Input} onChange={(e) => setBase64Input(e.target.value)} className="w-full border rounded-2xl p-4 h-32" />
-		              <div className="mt-4 bg-gray-100 p-3 rounded-xl break-all">Encoded: {btoa(base64Input)}</div>
-		            </div>
+		          {page === 'password' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                Password Generator
+				              </h2>
 
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">URL Encoder / Decoder</h2>
-		              <textarea value={urlInput} onChange={(e) => setUrlInput(e.target.value)} className="w-full border rounded-2xl p-4 h-32" />
-		              <div className="mt-4 bg-gray-100 p-3 rounded-xl break-all">{encodeURIComponent(urlInput)}</div>
-		            </div>
+				              <input
+				                type="range"
+				                min="6"
+				                max="64"
+				                value={passwordLength}
+				                onChange={(e) =>
+							                setPasswordLength(Number(e.target.value))
+							              }
+				                className="w-full"
+				              />
 
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">Timestamp Converter</h2>
-		              <input value={timestamp} onChange={(e) => setTimestamp(e.target.value)} className="w-full border rounded-2xl p-4" />
-		              <div className="mt-4 bg-gray-100 p-4 rounded-2xl">{new Date(Number(timestamp) * 1000).toString()}</div>
-		            </div>
+				              <button
+				                onClick={generatePassword}
+				                className="mt-4 bg-black text-white px-4 py-2 rounded"
+				              >
+				                Generate Password
+				              </button>
 
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">BMI Calculator</h2>
-		              <input type="number" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="Height in CM" className="w-full border rounded-2xl p-4 mb-3" />
-		              <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Weight in KG" className="w-full border rounded-2xl p-4" />
-		              <div className="mt-4 text-3xl font-bold">BMI: {bmi}</div>
-		            </div>
+				              <div className="mt-4 bg-gray-100 p-3 rounded break-all">
+				                {generatedPassword}
+				              </div>
+				            </div>
+				          )}
 
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">Color Picker</h2>
-		              <input type="color" value={hex} onChange={(e) => setHex(e.target.value)} className="w-full h-20 border rounded-2xl" />
-		              <div className="mt-4 bg-gray-100 p-4 rounded-2xl">HEX: {hex}</div>
-		            </div>
+		          {page === 'diff' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                Text Difference Checker
+				              </h2>
 
-		            <div className="bg-white rounded-3xl p-6 shadow-md">
-		              <h2 className="text-2xl font-bold mb-4">QR Code Generator</h2>
-		              <input value={qrText} onChange={(e) => setQrText(e.target.value)} className="w-full border rounded-2xl p-4" />
-		              <div className="mt-6 flex justify-center">
-		                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrText)}`} alt="QR Code" className="rounded-2xl border" />
-		              </div>
-		            </div>
-		          </div>
+				              <div className="grid md:grid-cols-2 gap-4">
+				                <textarea
+				                  value={text}
+				                  onChange={(e) => setText(e.target.value)}
+				                  className="border p-3 rounded h-64"
+				                />
 
-		          <section className="mt-14 bg-white rounded-3xl p-8 shadow-md">
-		            <h2 className="text-3xl font-bold mb-4">Docker Deployment</h2>
-		            <pre className="bg-black text-white p-6 rounded-2xl overflow-auto text-sm">{`FROM node:20
-			    WORKDIR /app
-			    COPY . .
-			    RUN npm install
-			    RUN npm run build
-			    EXPOSE 3000
-			    CMD [\"npm\", \"start\"]`}</pre>
-		          </section>
-		        </main>
+				                <textarea
+				                  value={text2}
+				                  onChange={(e) => setText2(e.target.value)}
+				                  className="border p-3 rounded h-64"
+				                />
+				              </div>
+
+				              <div className="mt-6 border rounded overflow-hidden">
+				                {diffView()}
+				              </div>
+				            </div>
+				          )}
+
+		          {page === 'json' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                JSON Formatter
+				              </h2>
+
+				              <textarea
+				                value={jsonInput}
+				                onChange={(e) => setJsonInput(e.target.value)}
+				                className="w-full h-40 border p-3 rounded"
+				              />
+
+				              <pre className="mt-4 bg-gray-100 p-3 rounded overflow-auto">
+				                {formatJSON()}
+				              </pre>
+				            </div>
+				          )}
+
+		          {page === 'yaml' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                YAML Validator
+				              </h2>
+
+				              <textarea
+				                value={yamlInput}
+				                onChange={(e) => setYamlInput(e.target.value)}
+				                className="w-full h-40 border p-3 rounded"
+				              />
+
+				              <div className="mt-4 bg-gray-100 p-3 rounded">
+				                {validateYAML()}
+				              </div>
+				            </div>
+				          )}
+
+		          {page === 'uuid' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                UUID Generator
+				              </h2>
+
+				              <button
+				                onClick={() => setUuidValue(uuidv4())}
+				                className="bg-black text-white px-4 py-2 rounded"
+				              >
+				                Generate UUID
+				              </button>
+
+				              <div className="mt-4 bg-gray-100 p-3 rounded break-all">
+				                {uuidValue}
+				              </div>
+				            </div>
+				          )}
+
+		          {page === 'hash' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                SHA256 Hash Generator
+				              </h2>
+
+				              <textarea
+				                value={hashInput}
+				                onChange={(e) => setHashInput(e.target.value)}
+				                className="w-full h-32 border p-3 rounded"
+				              />
+
+				              <div className="mt-4 bg-gray-100 p-3 rounded break-all">
+				                {generateHash()}
+				              </div>
+				            </div>
+				          )}
+
+		          {page === 'jwt' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                JWT Decoder
+				              </h2>
+
+				              <textarea
+				                value={jwtInput}
+				                onChange={(e) => setJwtInput(e.target.value)}
+				                className="w-full h-40 border p-3 rounded"
+				              />
+
+				              <pre className="mt-4 bg-gray-100 p-3 rounded overflow-auto">
+				                {decodeJWT()}
+				              </pre>
+				            </div>
+				          )}
+
+		          {page === 'markdown' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                Markdown Preview
+				              </h2>
+
+				              <textarea
+				                value={markdownInput}
+				                onChange={(e) => setMarkdownInput(e.target.value)}
+				                className="w-full h-40 border p-3 rounded"
+				              />
+
+				              <div className="mt-4 bg-gray-100 p-4 rounded">
+				                <ReactMarkdown>
+				                  {markdownInput}
+				                </ReactMarkdown>
+				              </div>
+				            </div>
+				          )}
+
+		          {page === 'regex' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                Regex Tester
+				              </h2>
+
+				              <input
+				                value={regexPattern}
+				                onChange={(e) => setRegexPattern(e.target.value)}
+				                className="w-full border p-3 rounded mb-3"
+				              />
+
+				              <textarea
+				                value={regexText}
+				                onChange={(e) => setRegexText(e.target.value)}
+				                className="w-full h-32 border p-3 rounded"
+				              />
+
+				              <div className="mt-4 bg-gray-100 p-3 rounded">
+				                {regexMatches()}
+				              </div>
+				            </div>
+				          )}
+
+		          {page === 'qr' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                QR Generator
+				              </h2>
+
+				              <input
+				                value={qrValue}
+				                onChange={(e) => setQrValue(e.target.value)}
+				                className="w-full border p-3 rounded"
+				              />
+
+				              <div className="mt-6 flex justify-center">
+				                <QRCode value={qrValue} />
+				              </div>
+				            </div>
+				          )}
+
+		          {page === 'age' && (
+				            <div className="bg-white p-6 rounded shadow">
+				              <h2 className="text-2xl font-bold mb-4">
+				                Age Calculator
+				              </h2>
+
+				              <input
+				                type="date"
+				                value={ageDate}
+				                onChange={(e) => setAgeDate(e.target.value)}
+				                className="border p-3 rounded"
+				              />
+
+				              <div className="mt-4 text-xl font-bold">
+				                Age: {calculateAge()} years
+				              </div>
+				            </div>
+				          )}
+
+		        </div>
 		      </div>
 		    );
 }
-
